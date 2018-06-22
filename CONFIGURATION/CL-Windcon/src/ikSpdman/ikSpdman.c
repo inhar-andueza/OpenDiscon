@@ -66,13 +66,14 @@ int ikSpdman_step(ikSpdman *self, double generatorSpeed, double rotorSpeed, doub
 	
 	/* prepare signals */
 	self->signals[0] = generatorSpeed;
-	self->signals[1] = self->gbratio*rotorSpeed;
+	/*self->signals[1] = self->gbratio*rotorSpeed;
 	diff = azimuth - self->lastAzimuth;
 	diff = diff < self->azimuthRange/2 ? diff : diff - self->azimuthRange;
 	diff = diff > -self->azimuthRange/2 ? diff : diff + self->azimuthRange;
 	self->signals[2] = self->gbratio * diff / self->T / 180.0 * 3.14159265358979;
-	self->lastAzimuth = azimuth;
-	
+	self->lastAzimuth = azimuth;*/
+	self->signals[1] = generatorSpeed;
+	self->signals[2] = generatorSpeed;
 	/* run diagnoser */
 	ikSensorDiagnoser_step(&(self->diagnoser), self->ok, self->signals);
 	

@@ -32,7 +32,7 @@ extern "C" {
 
 #include "ikClwindconWTCon.h"  
 
-	void setParams(ikClwindconWTConParams *param);
+	void setParams(ikClwindconWTConParams *param, double T);
 	
 	void ikTuneDrivetrainDamper(ikConLoopParams *params, double T);
 	
@@ -49,6 +49,8 @@ extern "C" {
 	void ikTunePitchNotches(ikConLoopParams *params, double T);
 	
 	void ikTunePitchPI(ikConLoopParams *params, double T);
+	
+	void ikLimitPitchRate(ikConLoopParams *params, double T);
 	
 	void ikTuneTorqueLowpassFilter(ikConLoopParams *params, double T);
 	

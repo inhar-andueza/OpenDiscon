@@ -1,0 +1,433 @@
+	if(c == 12 && DATA[1] <= (TStart + 15.0)){
+		DATA[41] = 90.0 * 3.1416 / 180.0;
+ 		DATA[42] = 90.0 * 3.1416 / 180.0;
+ 		DATA[43] = 90.0 * 3.1416 / 180.0;
+		con.in.externalMaximumTorque = 0.0; 
+	}	
+	
+	if(DATA[1] > (TStart + 15.0) ){	/*&& flag > 0*/  
+		static double minimumSpeed = 6.8 * 3.1416 / 30.0; /* rpm to rad/s */
+		static int t = 0;
+		static int ShutDown = 0;
+		static int oSa = 0;
+			
+		double overSpeedN4;
+		double overSpeedNA;
+		double pitchRate;
+		double finalPitchAngle = 90.0 * 3.1416 / 180;
+		double finePitchAngle = 0.0;
+		double yawRate;
+		double FinalYaw;
+		
+		double overSpeedN;		
+		double refTime = TStart + 15.0;
+		const double friedPitch = (double) DATA[3];
+		double timeStep = (double) DATA[2];
+		double pitchBlade1 = (double) DATA[3];
+		double pitchBlade2 = (double) DATA[32];	
+		double pitchBlade3 = (double) DATA[33];	
+			
+		double delay = DATA[1] - refTime;
+		
+		FILE *out;
+
+		if (flag > 0){	
+			switch (c) {	
+				case 0 :		/* OverSpeed_n4*/		
+						overSpeedN4 = param1 * 3.1416 / 30.0;
+						pitchRate = param2 * 3.1416 / 180.0; 
+						
+						con.in.generatorSpeed = (double) (DATA[19] * 0.9);
+						
+						overSpeedN = overSpeedN4;
+						if(DATA[19] > (float) overSpeedN && t < 1){
+							t++;
+							//FILE *out;
+										
+							out = fopen("Alarms.txt","wt");
+							fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+							fprintf(out,"%s %f\n %s","Warning: Overspeed limit reached: (rpm)",(overSpeedN * 30.0 / 3.1416),"\nShutting down wind turbine.\n");
+							fclose(out);
+						}		
+						break;
+						
+				case 1 :		/* OverSpeed_nA*/		
+						overSpeedNA = param1 * 3.1416 / 30.0;
+						pitchRate = param2 * 3.1416 / 180.0; 
+				
+						con.in.generatorSpeed = (double) (DATA[19] * 0.8);
+						
+						overSpeedN = overSpeedNA;
+						if(DATA[19] > (float) overSpeedN && t < 1){
+							t++;
+							//FILE *out;
+										
+							out = fopen("Alarms.txt","wt");
+							fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+							fprintf(out,"%s %f\n %s","Warning: Overspeed limit reached: (rpm)",(overSpeedN * 30.0 / 3.1416),"\nShutting down wind turbine.\n");
+							fclose(out);
+						}
+						break;
+				
+				case 2 :		/* Blade1ToFeather */			
+						pitchRate = param1 * 3.1416 / 180;
+						if(t < 1){
+							if( pitchBlade1 < (pitchBlade2 + 5*3.1416/180.0) ){
+								DATA[41] = (float) (pitchRate*timeStep + pitchBlade1);
+							} else {
+									t++;
+									//FILE *out;
+									
+									out = fopen("Alarms.txt","wt");
+									fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+									fprintf(out,"%s\n","Warning: Blade 1 to feather.\n");
+									fclose(out);
+							}
+						}			
+						break;
+				
+				case 3 :		/* Blade1ToFine */	
+						pitchRate = param1 * 3.1416 / 180;
+						if(t < 1){
+							if( pitchBlade1 > pitchBlade2 - 5*3.1416/180.0 ){
+								DATA[41] = (float) ((-pitchRate)*timeStep + pitchBlade1);
+							} else {
+									t++;
+									//FILE *out;
+									
+									out = fopen("Alarms.txt","wt");
+									fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+									fprintf(out,"%s\n","Warning: Blade 1 to fine.\n");
+									fclose(out);
+							}
+						} 
+						break;
+				
+				case 4 :		/* AllBladesToFine */	
+						pitchRate = param1 * 3.1416 / 180.0;	
+						if(t < 1){
+							con.in.externalMaximumPitch = (-pitchRate)*180/3.1416*timeStep + pitchBlade1*180/3.1416;
+							
+							//FILE *out;
+								
+							out = fopen("Alarms.txt","wt");
+							fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+							fprintf(out,"%s\n","Warning: All blades to fine.\n ");
+							fclose(out);
+						}
+
+						break;
+				
+				case 5 :		/* YawRunAwayPlus */
+						yawRate = param1 * 3.1416 / 180.0;
+						FinalYaw = param2 * 3.1416 / 180.0;		
+						
+						if(DATA[36] < (float) FinalYaw){
+							DATA[47] = (float) yawRate;
+						} else {
+							DATA[47] = 0.0;
+						}
+						if(DATA[36] > 0.5*3.1416/180.0 && t < 1){
+							t++;
+							//FILE *out;
+							
+							out = fopen("Alarms.txt","wt");
+							fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+							fprintf(out,"%s\n","Warning: Yaw clockwise run away.\n");
+							fclose(out);
+						}
+						break;
+						
+				case 6 :		/* YawRunAwayMinus */
+						yawRate = param1 * 3.1416 / 180.0;
+						FinalYaw = param2 * 3.1416 / 180.0;	
+						
+						if(DATA[36] > (float) FinalYaw){
+							DATA[47] = (float) (-yawRate);
+						} else {
+							DATA[47] = 0.0;
+						}
+						if(DATA[36] < -0.5*3.1416/180.0 && t < 1){
+							t++;
+							//FILE *out;
+							
+							out = fopen("Alarms.txt","wt");
+							fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+							fprintf(out,"%s\n","Warning: Yaw counter-clockwise run away.\n");
+							fclose(out);
+						}
+						break;
+				
+				case 7 :		/* BladeFried */
+						DATA[41] = (float) friedPitch;
+						if (t < 1){
+								t++;
+								//FILE *out;
+							
+								out = fopen("Alarms.txt","wt");
+								fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+								fprintf(out,"%s\n","Warning: Unable to change blade 1 pitch angle.\n");
+								fclose(out);
+						} 
+						break;
+				
+				case 8 :		/* GridLoss_0 */		
+						pitchRate = param1 * 3.1416 / 180;	
+				
+						con.in.externalMaximumTorque = 0.0;
+
+						if(t < 1){
+							t++;
+							//FILE *out;
+							
+							out = fopen("Alarms.txt","wt");
+							fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+							fprintf(out,"%s\n","Warning: Grid connection lost.\n Shutting down wind turbine.\n");
+							fclose(out);
+						} else {
+								ShutDown = 1;
+						}
+						break;
+				
+				case 9 :		/* GridLoss_2p25 */			
+						pitchRate = param1 * 3.1416 / 180;
+						
+						if( delay > 2.25 ){
+							con.in.externalMaximumTorque = 0.0; 
+							if(t < 1){
+								t++;
+								//FILE *out;
+								
+								out = fopen("Alarms.txt","wt");
+								fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+								fprintf(out,"%s\n","Warning: Grid connection lost.\n Shutting down wind turbine.\n");
+								fclose(out);
+							} else {
+								ShutDown = 1;
+							}
+						}
+						break;
+				
+				case 10 :		/* GridLoss_4 */		
+						pitchRate = param1 * 3.1416 / 180;					
+						if( delay > 4.0 ){
+							con.in.externalMaximumTorque = 0.0;
+							if(t < 1){
+								t++;
+								//FILE *out;
+								
+								out = fopen("Alarms.txt","wt");
+								fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+								fprintf(out,"%s\n","Warning: Grid connection lost.\n Shutting down wind turbine.\n");
+								fclose(out);
+							} else {
+								ShutDown = 1;
+							}
+						}
+						break;
+				
+				case 11 :		/* GridLoss_5p25 */		
+						pitchRate = param1 * 3.1416 / 180;																	
+						if( delay > 5.25 ){
+							con.in.externalMaximumTorque = 0.0; 
+							if(t < 1){
+								t++;
+								//FILE *out;
+								
+								out = fopen("Alarms.txt","wt");
+								fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+								fprintf(out,"%s\n","Warning: Grid connection lost.\n Shutting down wind turbine.\n");
+								fclose(out);
+							} else {
+								ShutDown = 1;
+							}
+						}
+						break;
+				
+				case 12 :		/* Startup */	
+						pitchRate = param1 * 3.1416 / 180;
+
+						if(con.in.generatorSpeed > minimumSpeed){
+							con.in.externalMaximumTorque = 1343.119;
+							if(t < 1){
+								t++;
+								//FILE *out;
+								
+								out = fopen("Alarms.txt","wt");
+								fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+								fprintf(out,"%s\n","Warning: Minimum speed reached.\n Connecting turbine to grid.\n");
+								fclose(out);
+							}
+						} else {	
+							con.in.externalMaximumTorque = 0.0;
+						}	
+						if(con.in.generatorSpeed < con.in.maximumSpeed * 0.9){
+							if( pitchBlade1 > finePitchAngle ){
+								DATA[41] = (float) ((-pitchRate)*timeStep + pitchBlade1);
+							} else {
+								DATA[41] = (float) finePitchAngle;
+							}		
+							if( pitchBlade2 > finePitchAngle ){
+								DATA[42] = (float) ((-pitchRate)*timeStep + pitchBlade2);
+							} else {
+								DATA[42] = (float) finePitchAngle;
+							}		
+							if( pitchBlade3 > finePitchAngle ){
+								DATA[43] = (float) ((-pitchRate)*timeStep + pitchBlade3);
+							} else {
+								DATA[43] = (float) finePitchAngle;
+							}		
+						}
+						break;
+				
+				case 13 :		/* Stop_Soft_0 */	
+						pitchRate = param1 * 3.1416 / 180;
+				
+						if(t < 1){
+							t++;
+							//FILE *out;
+								
+							out = fopen("Alarms.txt","wt");
+							fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+							fprintf(out,"%s\n","Warning: Shutting down wind turbine.\n");
+							fclose(out);
+						} else {
+								ShutDown = 1;
+						}
+						break;
+				
+				case 14 :		/* Stop_Soft_2p25 */	
+						pitchRate = param1 * 3.1416 / 180;
+						
+						if( delay > 2.25 ){
+							if(t < 1){
+								t++;
+								//FILE *out;
+									
+								out = fopen("Alarms.txt","wt");
+								fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+								fprintf(out,"%s\n","Warning: Shutting down wind turbine.\n");
+								fclose(out);
+							} else {
+								ShutDown = 1;
+							}
+						}
+						break;
+				
+				case 15 :		/* Stop_Soft_4 */
+						pitchRate = param1 * 3.1416 / 180;
+						
+						if( delay > 4.0 ){
+							if(t < 1){
+								t++;
+								//FILE *out;
+									
+								out = fopen("Alarms.txt","wt");
+								fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+								fprintf(out,"%s\n","Warning: Shutting down wind turbine.\n");
+								fclose(out);
+							} else {
+								ShutDown = 1;
+							}
+						}
+						
+						break;
+				
+				case 16 :		/* Stop_Soft_5p25 */
+						pitchRate = param1 * 3.1416 / 180;
+						
+						if( delay > 5.25 ){
+							if(t < 1){
+								t++;
+								//FILE *out;
+									
+								out = fopen("Alarms.txt","wt");
+								fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+								fprintf(out,"%s\n","Warning: Shutting down wind turbine.\n");
+								fclose(out);
+							} else {
+								ShutDown = 1;
+							}
+						} 
+						break;
+				
+				case 17 :		/* EmergencyStop */		
+						pitchRate = param1 * 3.1416 / 180;
+						
+						if(t < 1){
+							t++;
+							//FILE *out;
+								
+							out = fopen("Alarms.txt","wt");
+							fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+							fprintf(out,"%s\n","Warning: Emergency brake deployed.\nShutting down wind turbine.\n");
+							fclose(out);
+						}
+				
+						DATA[35] = 1;
+												
+						ShutDown = 1;
+						
+						break;
+						
+				case 18 :		/* No Events */
+						pitchRate = param1 * 3.1416 / 180;
+						break;
+			}
+			
+			if(c != 0 && c != 1){
+				overSpeedN = 18.5 * 3.1416 / 30.0;
+			}
+			if(c == 5 || c == 6 || c == 7){
+				pitchRate = 5.0 * 3.1416 / 180.0;
+			}
+			
+			if(DATA[19] > (float) overSpeedN ){
+				ShutDown = 1;
+				if(oSa < 1 && c != 0 && c != 1){
+					oSa++;
+					//FILE *out;
+										
+					out = fopen("Alarms.txt","at");
+					fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+					fprintf(out,"%s %f\n %s","Warning: Overspeed limit reached: (rpm)",(overSpeedN * 30.0 / 3.1416),"\nShutting down wind turbine.\n");
+					fclose(out);
+				}
+			}
+			if(ShutDown){
+				if( pitchBlade1 < finalPitchAngle ){
+					DATA[41] = (float) (pitchRate*timeStep + pitchBlade1);
+				} else {
+					DATA[41] = (float) finalPitchAngle;
+				}
+				if( pitchBlade2 < finalPitchAngle ){
+					DATA[42] = (float) (pitchRate*timeStep + pitchBlade2);
+				} else {
+					DATA[42] = (float) finalPitchAngle;
+				}
+				if( pitchBlade3 < finalPitchAngle ){
+					DATA[43] = (float) (pitchRate*timeStep + pitchBlade3);
+				} else {
+					DATA[43] = (float) finalPitchAngle;
+				}	
+				if(DATA[19] < (float) minimumSpeed){
+					con.in.externalMaximumTorque = 0.0;
+				} 
+			} 
+		
+			/* High wind deviation */ 
+		
+			if(DATA[23] > 30.0*3.1416/180.0 || DATA[23] < -30.0*3.1416/180.0){
+				if(t < 1){
+					t++;
+					//FILE *out;
+								
+					out = fopen("Alarms.txt","wt");
+					fprintf(out,"%s %f %s\n","T = ",DATA[1], "sec");
+					fprintf(out,"%s\n","Warning: High wind direction deviation.\nShutting down wind turbine.\n");
+					fclose(out);
+				}
+				ShutDown = 1;
+			}
+		}
+	}/**/

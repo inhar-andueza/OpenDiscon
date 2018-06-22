@@ -1,0 +1,4 @@
+10.0	- TStart
+1	- Flag (1: Con alarmas / 0: Sin alarmas)
+EmergencyStop.par 	- Caso a simular
+5	- Minimum Pitch Offset

@@ -1,3 +1,7 @@
+# OpenDiscon implementation for 2MW FOWT.
+
+Fault events and pitch offset included.
+
 # OpenDiscon
 Open source implementation of popular wind turbine controller interfaces.
 

@@ -44,7 +44,7 @@ void ikGeneratorSpeedSingalFail(ikClwindconWTConInputs *in) {
 
 	Set parameters here:
 	*/
-	const int N = 10000;
+	const int N = -1;
 	const double val = 0.0;
 	/*
 	####################################################################
