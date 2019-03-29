@@ -22,23 +22,52 @@ along with OpenDiscon. If not, see <http://www.gnu.org/licenses/>.
 #include "ikClwindconWTConfig.h"
 #include "OpenDiscon_EXPORT.h"
 #include <stdio.h>
+#include "dlfcn.h"
 
 void OpenDiscon_EXPORT DISCON(float *DATA, int FLAG, const char *INFILE, const char *OUTNAME, char *MESSAGE) {
 	int err;
 	static ikClwindconWTCon con;
 	double output = -12.0;
 	static FILE *f = NULL;
-	const double deratingRatio = 0.2; /* later to be got via the supercontroller interface */
+	
+	float FC_DATA[2]; /* FC_DATA[0] = derating ratio // FC_DATA[1] = Forced yaw angle rad/s */
+	static void * fcLibHandle;
+	void (*loadFarmData)(float *,int *,float *);
+	char *error;
+	static int iTurb;
 		
 	if (NINT(DATA[0]) == 0) {
 		ikClwindconWTConParams param;
 		ikClwindconWTCon_initParams(&param);
 		setParams(&param);
 		ikClwindconWTCon_init(&con, &param);
-		f = fopen("log.bin", "wb");
+		f = fopen("log.bin", "wb");		
+		
+		fcLibHandle = dlopen("./libFarmControl.so", RTLD_LAZY);
+		if (!fcLibHandle) {
+			fprintf(stderr, "%s\n", dlerror());
+		}
+
+		dlerror();    /* Clear any existing error */
 	}
+
+       /* Writing: cosine = (double (*)(double)) dlsym(handle, "cos"); would seem more natural, but the C99 standard leaves
+       casting from "void *" to a function pointer undefined. The assignment used below is the POSIX.1-2003 (Technical
+       Corrigendum 1) workaround; see the Rationale for the POSIX specification of dlsym(). */
+
+	*(void **) (&loadFarmData) = dlsym(fcLibHandle, "loadFarmData");
+	//loadFarmData = dlsym(fcLibHandle, "loadFarmData");
+
+	if ((error = dlerror()) != NULL)  {
+		fprintf(stderr, "%s\n", error);
+	}
+
+	(void) loadFarmData(DATA,&iTurb,FC_DATA);
+
+	//dlclose(fcLibHandle);	
+
 //TODO lower maximum torque according to maximum power with derating (it may be time to bring the power manager back)
-	con.in.deratingRatio = deratingRatio;
+	con.in.deratingRatio = FC_DATA[0];
 	con.in.externalMaximumTorque = 230.0; /* kNm */
 	con.in.externalMinimumTorque = 0.0; /* kNm */
 	con.in.externalMaximumPitch = 90.0; /* deg */
@@ -53,6 +82,9 @@ void OpenDiscon_EXPORT DISCON(float *DATA, int FLAG, const char *INFILE, const c
 	DATA[42] = (float) (con.out.pitchDemandBlade2/180.0*3.1416); /* deg to rad */
 	DATA[43] = (float) (con.out.pitchDemandBlade3/180.0*3.1416); /* deg to rad */
 	DATA[44] = (float) (con.out.pitchDemandBlade1/180.0*3.1416); /* deg to rad (collective pitch angle) */
+	
+	DATA[47] = FC_DATA[1]; /* Forced yaw angle rad/s */
+
 
 	err = ikClwindconWTCon_getOutput(&con, &output, "maximum torque");
 	fwrite(&(output), 1, sizeof(output), f);
