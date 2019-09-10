@@ -1,4 +1,4 @@
-/*
+﻿/*
 Copyright (C) 2017 IK4-IKERLAN
 
 This file is part of OpenDiscon.
@@ -26,8 +26,9 @@ along with OpenDiscon. If not, see <http://www.gnu.org/licenses/>.
 #include "ikClwindconWTConfig.h"
 
 void setParams(ikClwindconWTConParams *param) {
-	double T = 0.01;
+	double T = 0.005;
 
+	ikLimitPitchRate(&(param->collectivePitchControl), T);
 	ikTuneDrivetrainDamper(&(param->drivetrainDamper), T);
 	ikTuneSpeedRange(&(param->torqueControl));
 	ikTunePowerSettings(&(param->powerManager));
@@ -41,6 +42,27 @@ void setParams(ikClwindconWTConParams *param) {
 	ikTuneTorqueNotches(&(param->torqueControl), T);
 	ikTuneTorquePI(&(param->torqueControl), T);
 
+}
+
+void ikLimitPitchRate(ikConLoopParams *params, double T) {
+	
+	static double maxPitchRateT;
+	static double minPitchRateT;
+	/*
+	####################################################################
+	*/
+	const double maxPitchRate = 10.0;
+	const double minPitchRate = -10.0;
+	/*
+	####################################################################
+	*/
+	
+	maxPitchRateT = maxPitchRate * T;
+	minPitchRateT = minPitchRate * T;
+	
+	params->linearController.maxPostGainValue = &maxPitchRateT;
+	params->linearController.minPostGainValue = &minPitchRateT;
+	
 }
 
 void ikTuneDrivetrainDamper(ikConLoopParams *params, double T) {
@@ -58,9 +80,9 @@ void ikTuneDrivetrainDamper(ikConLoopParams *params, double T) {
 
     Set parameters here:
 	*/
-    double G = 0.0382; /* [kNm s^2/rad] 4 Nm s/rpm */
-    double d = 0.1; /* [-] */
-    double w = 21.1; /* [rad/s] */
+    double G = 0.0955; /* [kNm s^2/rad] 10 Nm s/rpm */
+    double d = 0.5; /* [-] */
+    double w = 23.0; /* [rad/s] */
     /*
     ####################################################################
 	*/
@@ -94,8 +116,8 @@ void ikTuneSpeedRange(ikConLoopParams *params) {
 					 
 	Set parameters here:
 	*/
-	const double Wmin = 31.4159265358979; /* [rad/s] 300 rpm */
-	const double Wmax = 50.2654824574367; /* [rad/s] 480 rpm */
+	const double Wmin = 104.7198; /* [rad/s] */
+	const double Wmax = 188.4956; /* [rad/s] */
 	/*
 	####################################################################
 	*/
@@ -114,8 +136,8 @@ void ikTunePowerSettings(ikPowmanParams *params) {
 					 
 	Set parameters here:
 	*/
-	const double Pn = 10.0e3; /* kW */
-	const double eff = 0.94; /* - */
+	const double Pn = 1.5e3; /* kW */
+	const double eff = 0.95; /* - */
 	/*
 	####################################################################
 	*/
@@ -144,8 +166,8 @@ This is an original implementation of derating strategy 3a as described by ECN i
 	Set parameters here:
 	*/
 	const int n = 11; /* number of points in the lookup table */
-	const double dr[] = {0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50}; /* - */
-	const double Kopt[] = {90.607511506848581, 86.115902720799966, 81.575353112422349, 77.050958297021111, 72.492888078483688, 68.064126426095299, 63.512773230238686, 58.970705560510474, 54.464434076487962, 49.891764181889293, 45.401884663773203}; /* Nm*s^2/rad^2 */
+	const double dr[] = {0.00, 0.025, 0.05, 0.075, 0.10, 0.125, 0.15, 0.175, 0.20, 0.225, 0.25}; /* - */
+	const double Kopt[] = {0.2522, 0.245895, 0.23959, 0.233285, 0.22698, 0.220675, 0.21437, 0.208065, 0.20176, 0.195455, 0.18915}; /* 0.2357, 0.2298, 0.2239, 0.2180, 0.2121, 0.2062, 0.2003, 0.1945, 0.1886, 0.1827, 0.1768 Nm*s^2/rad^2 */
 	/*
 	####################################################################
 	*/
@@ -174,8 +196,8 @@ This is an original implementation of derating strategy 3a as described by ECN i
 	Set parameters here:
 	*/
 	const int n = 11; /* number of points in the lookup table */
-	const double dr[] = {0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50}; /* - */
-	const double pitch[] = {0.00, 0.039449747839419, 0.058560350086376, 0.073725555631053, 0.086762305188347, 0.098108135965117, 0.108839079483571, 0.118773997213269, 0.128018250433713, 0.136903315900539, 0.145235569651071}; /* rad */
+	const double dr[] = {0.00, 0.025, 0.05, 0.075, 0.10, 0.125, 0.15, 0.175, 0.20, 0.225, 0.25}; /* - */
+	const double pitch[] = {0.00, 0.014166, 0.025607, 0.036172, 0.045483, 0.053842, 0.061789, 0.069504, 0.076228, 0.083127, 0.08969};/*{0.00, 0.0806427, 0.0920838, 0.102649,  0.111960, 0.120319, 0.128266, 0.135981, 0.142705, 0.149604, 0.156167}; /* rad */
 	/*
 	####################################################################
 	*/
@@ -198,9 +220,9 @@ void ikTunePitchPIGainSchedule(ikConLoopParams *params) {
 
 	Set parameters here:
 	*/
-	const int n = 10; /* number of points in the lookup table */
-	const double pitch[] = {0.0, 3.8424, 5.6505, 8.1091, 11.6797, 14.5687, 17.1140, 19.4472, 21.6249, 23.6774}; /* degrees */
-	const double gain[] = {2.1000, 2.1000, 2.0727, 1.7182, 1.5182, 1.3545, 1.2636, 1.1909, 1.1182, 1.0545}; /* - */
+	const int n = 8; /* number of points in the lookup table */
+	const double pitch[] = {3.8089,       7.3146,       12.496,       16.181,       19.288,       21.959,       24.317,       26.486}; /* degrees */
+	const double gain[] = {1.0,    0.6449,    0.4560,    0.3869,    0.3472,    0.2504,    0.2104,    0.2041}; /* - */
 	/*
     ####################################################################
 	*/
@@ -228,8 +250,8 @@ void ikTunePitchLowpassFilter(ikConLoopParams *params, double T) {
 
     Set parameters here:
 	*/
-    double w = 5.6; /* [rad/s] */
-    double d = 0.5; /* [-] */
+    double w = 10.856; /* [rad/s] */
+    double d = 0.8; /* [-] */
     /*
     ####################################################################
 	*/
@@ -249,16 +271,16 @@ void ikTunePitchLowpassFilter(ikConLoopParams *params, double T) {
     params->linearController.measurementTfs.tfParams[1].a[1] = -2 * (1 - (0.5*T*w)*(0.5*T*w)) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w));
     params->linearController.measurementTfs.tfParams[1].a[2] = (1 - T*d*w + (0.5*T*w)*(0.5*T*w)) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w));
 
-    params->linearController.measurementTfs.tfParams[2].enable = 1;
+    /*params->linearController.measurementTfs.tfParams[2].enable = 1;
     params->linearController.measurementTfs.tfParams[2].b[0] = 1.0;
     params->linearController.measurementTfs.tfParams[2].b[1] = 2.0;
     params->linearController.measurementTfs.tfParams[2].b[2] = 1.0;
     params->linearController.measurementTfs.tfParams[2].a[0] = 1.0;
     params->linearController.measurementTfs.tfParams[2].a[1] = -2 * (1 - (0.5*T*w)*(0.5*T*w)) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w));
-    params->linearController.measurementTfs.tfParams[2].a[2] = (1 - T*d*w + (0.5*T*w)*(0.5*T*w)) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w));
+    params->linearController.measurementTfs.tfParams[2].a[2] = (1 - T*d*w + (0.5*T*w)*(0.5*T*w)) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w));*/
 
-    params->linearController.measurementTfs.tfParams[3].enable = 1;
-    params->linearController.measurementTfs.tfParams[3].b[0] = ((0.5*T*w)*(0.5*T*w) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w))) * ((0.5*T*w)*(0.5*T*w) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w)));
+    params->linearController.measurementTfs.tfParams[2].enable = 1;
+    params->linearController.measurementTfs.tfParams[2].b[0] = ((0.5*T*w)*(0.5*T*w) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w))); /** ((0.5*T*w)*(0.5*T*w) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w)));*/
 
 }
 
@@ -276,8 +298,8 @@ void ikTunePitchNotches(ikConLoopParams *params, double T) {
 
     Set parameters here:
 	*/
-    double w = 1.59; /* [rad/s] */
-    double dnum = 0.01; /* [-] */
+    double w = 2.5235; /* [rad/s] */
+    double dnum = 0.05; /* [-] */
     double dden = 0.2; /* [-] */
     /*
     ####################################################################
@@ -307,8 +329,8 @@ void ikTunePitchPI(ikConLoopParams *params, double T) {
 
     Set parameters here:
 	*/
-    double Kp = -0.3939; /* [degs/rad] 7.2e-4 rad/rpm */
-    double Ki = -0.1313; /* [deg/rad] 2.4e-4 rad/rpms */
+    double Kp = -1.0972; /* [degs/rad] rad/rpm */
+    double Ki = -1.0972*0.64; /* [deg/rad]  rad/rpms */
     /*
     ####################################################################
 	*/
@@ -354,8 +376,8 @@ void ikTuneTorqueLowpassFilter(ikConLoopParams *params, double T) {
 
     Set parameters here:
 	*/
-    double w = 3.39; /* [rad/s] */
-    double d = 0.5; /* [-] */
+    double w = 2.5032; /* [rad/s] */
+    double d = 0.1; /* [-] */
     /*
     ####################################################################
 	*/
@@ -375,7 +397,10 @@ void ikTuneTorqueLowpassFilter(ikConLoopParams *params, double T) {
     params->linearController.measurementTfs.tfParams[0].a[1] = -2 * (1 - (0.5*T*w)*(0.5*T*w)) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w));
     params->linearController.measurementTfs.tfParams[0].a[2] = (1 - T*d*w + (0.5*T*w)*(0.5*T*w)) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w));
 
-    params->linearController.measurementTfs.tfParams[1].enable = 1;
+	params->linearController.measurementTfs.tfParams[1].enable = 1;
+    params->linearController.measurementTfs.tfParams[1].b[0] = ((0.5*T*w)*(0.5*T*w) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w)));
+
+    /*params->linearController.measurementTfs.tfParams[1].enable = 1;
     params->linearController.measurementTfs.tfParams[1].b[0] = 1.0;
     params->linearController.measurementTfs.tfParams[1].b[1] = 2.0;
     params->linearController.measurementTfs.tfParams[1].b[2] = 1.0;
@@ -384,7 +409,7 @@ void ikTuneTorqueLowpassFilter(ikConLoopParams *params, double T) {
     params->linearController.measurementTfs.tfParams[1].a[2] = (1 - T*d*w + (0.5*T*w)*(0.5*T*w)) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w));
 
     params->linearController.measurementTfs.tfParams[2].enable = 1;
-    params->linearController.measurementTfs.tfParams[2].b[0] = ((0.5*T*w)*(0.5*T*w) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w))) * ((0.5*T*w)*(0.5*T*w) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w)));
+    params->linearController.measurementTfs.tfParams[2].b[0] = ((0.5*T*w)*(0.5*T*w) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w))) * ((0.5*T*w)*(0.5*T*w) / (1 + T*d*w + (0.5*T*w)*(0.5*T*w)));*/
 
 }
 
@@ -402,9 +427,9 @@ void ikTuneTorqueNotches(ikConLoopParams *params, double T) {
 
     Set parameters here:
 	*/
-    double w = 1.59; /* [rad/s] */
-    double dnum = 0.01; /* [-] */
-    double dden = 0.2; /* [-] */
+    double w = 2.5781; /* [rad/s] */
+    double dnum = 0.05; /* [-] */
+    double dden = 0.5; /* [-] */
     /*
     ####################################################################
 	*/
@@ -433,8 +458,8 @@ void ikTuneTorquePI(ikConLoopParams *params, double T) {
 
     Set parameters here:
 	*/
-    double Kp = -34.3775; /* [kNms/rad] 3600 Nm/rpm */
-    double Ki = -11.4592; /* [kNm/rad] 1200 Nm/rpms */
+    double Kp = -0.3252; /* [kNms/rad] Nm/rpm */
+    double Ki = -0.3252*0.75; /* [kNm/rad] Nm/rpms */
     /*
     ####################################################################
 	*/

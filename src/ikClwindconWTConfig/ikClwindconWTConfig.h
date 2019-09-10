@@ -58,6 +58,8 @@ extern "C" {
 
 	void ikTunePitchPIGainSchedule(ikConLoopParams *params);
 
+	void ikLimitPitchRate(ikConLoopParams *params, double T);
+
 #ifdef __cplusplus
 }
 #endif
