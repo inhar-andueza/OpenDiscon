@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2017 IK4-IKERLAN
+Copyright (C) 2020 IKERLAN
 
 This file is part of OpenDiscon.
  
@@ -45,9 +45,7 @@ int ikMooringWTCon_init(ikMooringWTCon *self, const ikMooringWTConParams *params
     err = ikConLoop_init(&(self->priv.colpitchcon), &(params_.collectivePitchControl));
     if (err) return -3;
     err = ikTpman_init(&(self->priv.tpManager), &(params_.torquePitchManager));
-    if (err) return -5;
-	err = ikPowman_init(&(self->priv.powerManager), &(params_.powerManager));
-	if (err) return -6;
+    if (err) return -4;
     
     /* initialise feedback signals */
     self->priv.torqueFromTorqueCon = 0.0;
@@ -62,21 +60,18 @@ void ikMooringWTCon_initParams(ikMooringWTConParams *params) {
     ikConLoop_initParams(&(params->drivetrainDamper));
     ikConLoop_initParams(&(params->torqueControl));
     ikTpman_initParams(&(params->torquePitchManager));
-	ikPowman_initParams(&(params->powerManager));
 }
 
 int ikMooringWTCon_step(ikMooringWTCon *self) {
-	
-	/* run power manager */
-	self->priv.maxTorqueFromPowman = ikPowman_step(&(self->priv.powerManager), self->in.deratingRatio, self->in.maximumSpeed, self->in.generatorSpeed);
-	ikPowman_getOutput(&(self->priv.powerManager), &(self->priv.minPitchFromPowman), "minimum pitch");
-	ikPowman_getOutput(&(self->priv.powerManager), &(self->priv.belowRatedTorque), "below rated torque");
+
+	/* calculate maximum torque */
+	self->priv.maxTorque = self->in.ratedPower / self->in.maximumSpeed / self->in.efficiency;
 
 	/* calculate minimum pitch */
-	self->priv.minPitch = self->priv.minPitchFromPowman > self->in.externalMinimumPitch ? self->priv.minPitchFromPowman : self->in.externalMinimumPitch;
+	self->priv.minPitch = self->priv.minimumPitchOffset > self->in.externalMinimumPitch ? self->priv.minimumPitchOffset : self->in.externalMinimumPitch;
 	
-	/* calculate maximum torque */
-	self->priv.maxTorque = self->priv.maxTorqueFromPowman < self->in.externalMaximumTorque ? self->priv.maxTorqueFromPowman : self->in.externalMaximumTorque;
+	/* calculate below-rated torque */
+	self->priv.belowRatedTorque = self->in.Kopt * self->in.generatorSpeed*self->in.generatorSpeed;
 
     /* run torque-pitch manager */
     self->priv.tpManState = ikTpman_step(&(self->priv.tpManager), self->priv.torqueFromTorqueCon, self->priv.maxTorque, self->in.externalMinimumTorque, self->priv.collectivePitchDemand, self->in.externalMaximumPitch, self->priv.minPitch);
@@ -91,7 +86,7 @@ int ikMooringWTCon_step(ikMooringWTCon *self) {
 
     /* calculate torque demand */
     self->out.torqueDemand = self->priv.torqueFromDtdamper + self->priv.torqueFromTorqueCon;
-
+	
     /* run collective pitch control */
     self->priv.collectivePitchDemand = ikConLoop_step(&(self->priv.colpitchcon), self->in.maximumSpeed, self->in.generatorSpeed, self->priv.minPitch, self->priv.maxPitch);
     
@@ -136,23 +131,15 @@ int ikMooringWTCon_getOutput(const ikMooringWTCon *self, double *output, const c
         *output = self->priv.collectivePitchDemand;
         return 0;
     }
-    if (!strcmp(name, "maximum torque from power manager")) {
-        *output = self->priv.maxTorqueFromPowman;
-        return 0;
-    }
-    if (!strcmp(name, "minimum pitch from power manager")) {
-        *output = self->priv.minPitchFromPowman;
+    if (!strcmp(name, "below rated torque")) {
+        *output = self->priv.belowRatedTorque;
         return 0;
     }
 
     /* pick up the block names */
     sep = strstr(name, ">");
     if (NULL == sep) return -1;
-	if (!strncmp(name, "power manager", strlen(name) - strlen(sep))) {
-        err = ikPowman_getOutput(&(self->priv.powerManager), output, sep + 1);
-        if (err) return -1;
-        else return 0;
-    }
+	
 	if (!strncmp(name, "torque-pitch manager", strlen(name) - strlen(sep))) {
         err = ikTpman_getOutput(&(self->priv.tpManager), output, sep + 1);
         if (err) return -1;
@@ -173,7 +160,11 @@ int ikMooringWTCon_getOutput(const ikMooringWTCon *self, double *output, const c
         if (err) return -1;
         else return 0;
     }
-
+	if (!strncmp(name, "below rated torque", strlen(name) - strlen(sep))) {
+		err = ikConLoop_getOutput(&(self->priv.belowRatedTorque), output, sep + 1);
+		if (err) return -1;
+		else return 0;
+	}
 
     return -2;
 }

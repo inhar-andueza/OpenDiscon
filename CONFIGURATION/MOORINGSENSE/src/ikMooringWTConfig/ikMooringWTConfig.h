@@ -32,18 +32,16 @@ extern "C" {
 
 #include "ikMooringWTCon.h"  
 
-	void setParams(ikMooringWTConParams *param);
+	void setParams(ikMooringWTCon *con, ikMooringWTConParams *param, double T);
 	
 	void ikTuneDrivetrainDamper(ikConLoopParams *params, double T);
 	
 	void ikTuneSpeedRange(ikConLoopParams *params);
 	
-	void ikTunePowerSettings(ikPowmanParams *params);
+	void ikTunePowerSettings(ikMooringWTCon *con);
 	
-	void ikTuneDeratingTorqueStrategy(ikPowmanParams *params);
-	
-	void ikTuneDeratingPitchStrategy(ikPowmanParams *params);
-	
+	void ikTuneBelowRatedTorque(ikMooringWTCon *con);
+		
 	void ikTunePitchLowpassFilter(ikConLoopParams *params, double T);
 	
 	void ikTunePitchNotches(ikConLoopParams *params, double T);
@@ -57,6 +55,8 @@ extern "C" {
 	void ikTuneTorquePI(ikConLoopParams *params, double T);
 
 	void ikTunePitchPIGainSchedule(ikConLoopParams *params);
+
+	void ikMooringWTConfigPitchOffset(ikMooringWTCon *self);
 
 #ifdef __cplusplus
 }

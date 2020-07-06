@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2017 IK4-IKERLAN
+Copyright (C) 2020 IKERLAN
 
 This file is part of OpenDiscon.
  

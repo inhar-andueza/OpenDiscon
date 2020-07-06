@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2017 IK4-IKERLAN
+Copyright (C) 2020 IKERLAN
 
 This file is part of OpenDiscon.
  
@@ -24,15 +24,22 @@ along with OpenDiscon. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "ikMooringWTConfig.h"
+#include "ikMooringWTPitchOffset.h"
 
-void setParams(ikMooringWTConParams *param) {
-	double T = 0.0125;
+void setParams(ikMooringWTCon *self, ikMooringWTConParams *param, double T) {
+	/*! [Sampling interval] */
+	/*
+	####################################################################
+					 Sampling interval
+	Set sampling interval in discon.c
+	####################################################################
+	*/
+	/*! [Sampling interval] */
 
 	ikTuneDrivetrainDamper(&(param->drivetrainDamper), T);
 	ikTuneSpeedRange(&(param->torqueControl));
-	ikTunePowerSettings(&(param->powerManager));
-	ikTuneDeratingTorqueStrategy(&(param->powerManager));
-	ikTuneDeratingPitchStrategy(&(param->powerManager));
+	ikTunePowerSettings(self);
+	ikTuneBelowRatedTorque(self);
 	ikTunePitchPIGainSchedule(&(param->collectivePitchControl));
 	ikTunePitchLowpassFilter(&(param->collectivePitchControl), T);
 	//ikTunePitchNotches(&(param->collectivePitchControl), T);
@@ -40,6 +47,7 @@ void setParams(ikMooringWTConParams *param) {
 	ikTuneTorqueLowpassFilter(&(param->torqueControl), T);
 	//ikTuneTorqueNotches(&(param->torqueControl), T);
 	ikTuneTorquePI(&(param->torqueControl), T);
+	ikMooringWTConfigPitchOffset(self);
 
 }
 
@@ -106,7 +114,7 @@ void ikTuneSpeedRange(ikConLoopParams *params) {
 
 }
 	
-void ikTunePowerSettings(ikPowmanParams *params) {
+void ikTunePowerSettings(ikMooringWTCon *self) {
 	
 	/*
 	####################################################################
@@ -115,21 +123,17 @@ void ikTunePowerSettings(ikPowmanParams *params) {
 	Set parameters here:
 	*/
 	const double Pn = 10.0e3; /* kW */
-	const double eff = 0.94; /* - */
+	const double eff = 1.0; /* - */
 	/*
 	####################################################################
 	*/
 
-	params->ratedPower = Pn;
-	params->efficiency = eff;
+	self->in.ratedPower = Pn;
+	self->in.efficiency = eff;
+
 }
 
-void ikTuneDeratingTorqueStrategy(ikPowmanParams *params) {
-/*
-This is an original implementation of derating strategy 3a as described by ECN in deliverable D2.1 of H2020 project CL-Windcon.
-*/
-
-	int i;
+void ikTuneBelowRatedTorque(ikMooringWTCon *self) {
 	
 	/*! [Optimum torque] */
     /*
@@ -140,52 +144,19 @@ This is an original implementation of derating strategy 3a as described by ECN i
 
 	Q = Kopt(dr) * w^2
 
-	The default values for dr and Kopt have been kindly provided by ECN, who have calculated them to suit the DTU 10MW reference wind turbine from FP7 project INNWIND.
+	The default value for Kopt has been calculated to suit the DTU 10MW reference wind turbine from FP7 project INNWIND.
 	Set parameters here:
 	*/
-	const int n = 1; /* number of points in the lookup table */
-	const double dr[] = {0.00, 0.05}; /* - , 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50*/
-	const double Kopt[] = { 72.9513, 69.3037 }; /* Nm*s^2/rad^2 , 86.115902720799966, 81.575353112422349, 77.050958297021111, 72.492888078483688, 68.064126426095299, 63.512773230238686, 58.970705560510474, 54.464434076487962, 49.891764181889293, 45.401884663773203*/
-	/*72.951
+
+	const double Kopt = 103.278666; /* Nm*s^2/rad^2 */
+
+	/*
 	####################################################################
 	*/
 	/*! [Optimum torque] */
 
-	params->belowRatedTorqueGainTableN = n;
-	for (i = 0; i < n; i++) {
-		params->belowRatedTorqueGainTableX[i] = dr[i];
-		params->belowRatedTorqueGainTableY[i] = Kopt[i]/1.0e3;
-	}		
-}
-
-void ikTuneDeratingPitchStrategy(ikPowmanParams *params) {
-/*
-This is an original implementation of derating strategy 3a as described by ECN in deliverable D2.1 of H2020 project CL-Windcon.
-*/
-
-	int i;
-	
-	/*! [Minimum pitch] */
-    /*
-	####################################################################
-					 Minimum pitch
-
-	The default values have been kindly provided by ECN, who have calculated them to suit the DTU 10MW reference wind turbine from FP7 project INNWIND.
-	Set parameters here:
-	*/
-	const int n = 11; /* number of points in the lookup table */
-	const double dr[] = {0.00, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50}; /* - */
-	const double pitch[] = {0.00, 0.039449747839419, 0.058560350086376, 0.073725555631053, 0.086762305188347, 0.098108135965117, 0.108839079483571, 0.118773997213269, 0.128018250433713, 0.136903315900539, 0.145235569651071}; /* rad */
-	/*
-	####################################################################
-	*/
-	/*! [Minimum pitch] */
-
-	params->minimumPitchTableN = n;
-	for (i = 0; i < n; i++) {
-		params->minimumPitchTableX[i] = dr[i];
-		params->minimumPitchTableY[i] = pitch[i]/3.1416*180.0;
-	}		
+	self->in.Kopt = Kopt / 1000.0;
+		
 }
 
 void ikTunePitchPIGainSchedule(ikConLoopParams *params) {
@@ -463,5 +434,35 @@ void ikTuneTorquePI(ikConLoopParams *params, double T) {
     params->linearController.postGainTfs.tfParams[0].a[0] = 1.0;
     params->linearController.postGainTfs.tfParams[0].a[1] = -1.0;
     params->linearController.postGainTfs.tfParams[0].a[2] = 0.0;
+
+}
+
+void ikMooringWTConfigPitchOffset(ikMooringWTCon *self) {
+	int i;
+
+	/*! [Minimum pitch] */
+	/*
+	####################################################################
+					 Minimum pitch for pitch offset
+
+	Set parameters here:
+	*/
+	const int n = 7; /* number of points in the lookup table */
+	const double speed[] = {0.85, 0.875, 0.9, 0.925, 0.95, 0.975, 1.0}; /* rpm */
+	const double pitch[] = {0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0}; /* deg */
+	/*
+	####################################################################
+	*/
+	/*! [Minimum pitch] */
+		
+	self->priv.pitchOffsetTableN = n + 2;
+	for (i = 0; i < n; i++) {
+		self->priv.pitchOffsetTableX[i+1] = speed[i]; 
+		self->priv.pitchOffsetTableY[i+1] = pitch[i];
+	}
+	self->priv.pitchOffsetTableX[0] = 0.0;
+	self->priv.pitchOffsetTableY[0] = pitch[0];
+	self->priv.pitchOffsetTableX[n+1] = 10.0;
+	self->priv.pitchOffsetTableY[n+1] = pitch[n-1];
 
 }

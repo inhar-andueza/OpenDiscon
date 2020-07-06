@@ -32,7 +32,6 @@ extern "C" {
 
 #include "ikConLoop.h"
 #include "ikTpman.h"
-#include "ikPowman.h"
 
     /**
      * @struct ikMooringWTConInputs
@@ -45,7 +44,9 @@ extern "C" {
         double externalMinimumPitch; /**<external minimum pitch in degrees*/
         double maximumSpeed; /**<maximum generator speed setpoing in rad/s*/
         double generatorSpeed; /**<generator speed in rad/s*/
-		double deratingRatio; /**<derating ratio, non-dimensional*/
+		double ratedPower; /**<rated generator power in kW*/
+		double efficiency; /**<generator efficiency in %*/
+		double Kopt; /**<Optimal K for below-rated torque kNm/(rad/s)^2*/
     } ikMooringWTConInputs;
 
     /**
@@ -62,7 +63,6 @@ extern "C" {
     /* @cond */
 
     typedef struct ikMooringWTConPrivate {
-		ikPowman powerManager;
         ikTpman   tpManager;
         ikConLoop dtdamper;
         ikConLoop torquecon;
@@ -77,8 +77,12 @@ extern "C" {
         double torqueFromTorqueCon;
         double collectivePitchDemand;
 		double belowRatedTorque;
-		double minPitchFromPowman;
-		double maxTorqueFromPowman;
+		/* Pitch offset parameters */
+		double minimumPitchOffset;
+		ikLutbl lutblPitchOffset;
+		int pitchOffsetTableN;
+		double pitchOffsetTableX[IKLUTBL_MAXPOINTS];
+		double pitchOffsetTableY[IKLUTBL_MAXPOINTS];
     } ikMooringWTConPrivate;
     /* @endcond */
 
@@ -139,8 +143,7 @@ extern "C" {
         ikConLoopParams torqueControl; /**<torque control initialisation parameters*/
         ikConLoopParams collectivePitchControl; /**<collective pitch control initialisation parameters*/
         ikTpmanParams torquePitchManager; /**<torque-pitch manager inintialisation parameters*/
-		ikPowmanParams powerManager; /**<power manager initialisation parameters*/
-    } ikMooringWTConParams;
+	} ikMooringWTConParams;
 
     /**
      * Initialise a controller instance
