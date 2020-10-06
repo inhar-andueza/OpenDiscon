@@ -1,3 +1,9 @@
+# 1034.16 HYPI2020
+
+OpenDiscon controller implementation for Simulink. 
+
+E. g. usage with pitch hydraulic systems modeled in Simulink
+
 # OpenDiscon
 Open source implementation of popular wind turbine controller interfaces.
 
