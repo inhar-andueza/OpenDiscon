@@ -1,3 +1,7 @@
+# 40.566 MOORINGSENSE
+
+OpenDiscon implementation for a 10MW FOWT for WP6. 
+
 # OpenDiscon
 Open source implementation of popular wind turbine controller interfaces.
 
