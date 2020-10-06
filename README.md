@@ -1,3 +1,7 @@
+# 40.445 CL - WINDCON
+
+SuperController implementation for farm control with FAST.Farm
+
 # OpenDiscon
 Open source implementation of the legacy GHBladed external controller interface.
 
