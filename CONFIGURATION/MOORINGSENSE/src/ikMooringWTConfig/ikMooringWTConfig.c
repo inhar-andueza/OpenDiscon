@@ -66,9 +66,9 @@ void ikTuneDrivetrainDamper(ikConLoopParams *params, double T) {
 
     Set parameters here:
 	*/
-	double G = 1;/*0.0382; /* [kNm s^2/rad] 4 Nm s/rpm */
-	double d = 0.0;/*0.1; /* [-] */
-	double w = 0.0;/*21.1; /* [rad/s] */
+	double G = 0.0209; /* [kNm s^2/rad] 200 Nm/rpm */
+	double d = 0.5; /* [-] */
+	double w = 16.6; /* [rad/s] */
     /*
     ####################################################################
 	*/

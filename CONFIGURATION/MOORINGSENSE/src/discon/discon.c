@@ -47,10 +47,10 @@ void OpenDiscon_EXPORT DISCON(float *DATA, int FLAG, const char *INFILE, const c
 		setParams(&con, &param, T);
 		ikMooringWTCon_init(&con, &param);
 		ikMooringPitchLutbl_init(&con);
-		f = fopen("log.bin", "wb");
+		//f = fopen("log.bin", "wb");
 		Tstep = T;
 	}
-
+	
 	con.in.externalMaximumTorque = 230.0; /* kNm */
 	con.in.externalMinimumTorque = 0.0; /* kNm */
 	con.in.externalMaximumPitch = 90.0; /* deg */
@@ -68,5 +68,5 @@ void OpenDiscon_EXPORT DISCON(float *DATA, int FLAG, const char *INFILE, const c
 	DATA[44] = (float) (con.out.pitchDemandBlade1/180.0*3.1416); /* deg to rad (collective pitch angle) */
 
 	err = ikMooringWTCon_getOutput(&con, &output, "maximum torque");
-	fwrite(&(output), 1, sizeof(output), f);
+	//fwrite(&(output), 1, sizeof(output), f);
 }	
